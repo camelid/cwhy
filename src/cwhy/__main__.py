@@ -78,16 +78,13 @@ def main():
         help="the underlying compiler. Only enabled with --wrapper",
     )
 
-    subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
-
-    subparsers.add_parser("explain", help="explain the diagnostic (default)")
-    subparsers.add_parser("fix", help="propose a fix for the diagnostic")
-    subparsers.add_parser("diff", help="propose a fix in diff format")
-    subparsers.add_parser(
-        "extract-sources", help="extract the source locations from the diagnostic"
+    parser.add_argument(
+        "subcommand",
+        type=str,
+        nargs="?",
+        default="explain",
+        help="explain, fix, diff, or extract-sources (default: explain)",
     )
-
-    parser.set_defaults(subcommand="explain")
 
     args = vars(parser.parse_args())
 
