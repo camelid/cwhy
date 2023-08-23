@@ -195,35 +195,32 @@ def evaluate_text_prompt(args, prompt, wrap=True, **kwargs):
 # Define error patterns with associated information. The numbers
 # correspond to the groups matching file name and line number.
 error_patterns = [
-    ("C#", re.compile(
-        r"([a-zA-Z0-9./][^:\r\n]+)\((\d+),(\d+)\): error ([A-Za-z0-9]+): (.*)"
-    ), 1, 2),
-    ("C/C++/Rust", re.compile(
-        r"([a-zA-Z0-9./][^:->]+):([0-9]+):([0-9]+)"
-    ), 1, 2),
+    (
+        "C#",
+        re.compile(
+            r"([a-zA-Z0-9./][^:\r\n]+)\((\d+),(\d+)\): error ([A-Za-z0-9]+): (.*)"
+        ),
+        1,
+        2,
+    ),
+    ("C/C++/Rust", re.compile(r"([a-zA-Z0-9./][^:->]+):([0-9]+):([0-9]+)"), 1, 2),
     # Note: LaTeX must precede Java
-    ("LaTeX", re.compile(
-        r"(.*\.tex):(\d+): error: (.*)"
-    ), 1, 2),
-    ("Java", re.compile(
-        r"([a-zA-Z0-9./][^:->]+):([0-9]+):"
-    ), 1, 2),
-    ("Python", re.compile(
-        r'\s*File "(.*?)", line (\d+), in ([^\<].*)'
-    ), 1, 2),
-    ("Go", re.compile(
-        r"([a-zA-Z0-9./][^:\r\n]+):([0-9]+):([0-9]+): (.*): (.*)"
-    ), 1, 2),
-    ("TypeScript", re.compile(
-        r"([a-zA-Z0-9./][^:\r\n]+)\((\d+),(\d+)\): error ([A-Za-z0-9]+): (.*)"
-    ), 1, 2),
-    ("Ruby", re.compile(
-        r'"(.*\.rb)", line (\d+)(?:, in `.*\')?: (.*)'
-    ), 1, 2),
-    ("PHP", re.compile(
-        r"PHP (?:Parse|Fatal) error: (.*) in (.*) on line (\d+)"
-    ), 2, 3),
+    ("LaTeX", re.compile(r"(.*\.tex):(\d+): error: (.*)"), 1, 2),
+    ("Java", re.compile(r"([a-zA-Z0-9./][^:->]+):([0-9]+):"), 1, 2),
+    ("Python", re.compile(r'\s*File "(.*?)", line (\d+), in ([^\<].*)'), 1, 2),
+    ("Go", re.compile(r"([a-zA-Z0-9./][^:\r\n]+):([0-9]+):([0-9]+): (.*): (.*)"), 1, 2),
+    (
+        "TypeScript",
+        re.compile(
+            r"([a-zA-Z0-9./][^:\r\n]+)\((\d+),(\d+)\): error ([A-Za-z0-9]+): (.*)"
+        ),
+        1,
+        2,
+    ),
+    ("Ruby", re.compile(r'"(.*\.rb)", line (\d+)(?:, in `.*\')?: (.*)'), 1, 2),
+    ("PHP", re.compile(r"PHP (?:Parse|Fatal) error: (.*) in (.*) on line (\d+)"), 2, 3),
 ]
+
 
 class explain_context:
     def __init__(self, args, diagnostic):
@@ -235,7 +232,7 @@ class explain_context:
         self.code_locations = collections.defaultdict(dict)
 
         # Go through the diagnostic and build up a list of code locations.
-        for (linenum, line) in enumerate(self.diagnostic_lines):
+        for linenum, line in enumerate(self.diagnostic_lines):
             file_name = None
             line_number = None
             for lang, pattern, file_group, line_group in error_patterns:
@@ -249,7 +246,7 @@ class explain_context:
 
             if not file_name:
                 continue
-            
+
             try:
                 (abridged_code, line_start) = read_lines(
                     file_name, line_number - 7, line_number + 3
@@ -419,17 +416,22 @@ def extract_sources_prompt(diagnostic):
     return user_prompt
 
 
-def wrapper(args):
+def wrapper(args, command: List[str]):
+    """
+    Process the command in command, with possible modifier flags in args.
+    This command ignores the --compiler-wrapper or command flags.
+    These must be part of the command argument at this point.
+    """
     process = subprocess.run(
-        [args["wrapper_compiler"], *sys.argv[1:]],
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
     )
+    print(process.stdout)
 
     status = process.returncode
     if status != 0:
-        print(process.stdout)
         if "CWHY_DISABLE" not in os.environ:
             print("==================================================")
             print("CWhy")

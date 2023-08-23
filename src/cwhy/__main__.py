@@ -3,21 +3,12 @@
 import argparse
 import importlib.metadata
 import os
+import subprocess
 import sys
 import tempfile
 import textwrap
 
 from . import cwhy
-
-
-def wrapper(args):
-    return textwrap.dedent(
-        f"""
-        #! /usr/bin/env python3
-        from cwhy import cwhy
-        cwhy.wrapper({args})
-        """
-    ).lstrip()
 
 
 def main():
@@ -66,16 +57,11 @@ def main():
         help="only print prompt and exit (for debugging purposes)",
     )
     parser.add_argument(
-        "--wrapper",
-        action="store_true",
-        help="enable compiler wrapper behavior",
-    )
-    parser.add_argument(
-        "--wrapper-compiler",
+        "--compiler-wrapper",
         metavar="COMPILER",
         type=str,
-        default="c++",
-        help="the underlying compiler. Only enabled with --wrapper",
+        default=None,
+        help="enable compiler wrapper mode, providing the path to the compiler to wrap",
     )
 
     parser.add_argument(
@@ -86,19 +72,42 @@ def main():
         help="explain, fix, diff, or extract-sources (default: explain)",
     )
 
+    parser.add_argument(
+        "---",
+        dest="command",
+        default=None,
+        help=argparse.SUPPRESS,
+        nargs=argparse.REMAINDER,
+    )
+
     args = vars(parser.parse_args())
 
     if args["version"]:
         print(f"cwhy version {importlib.metadata.metadata('cwhy')['Version']}")
-        return
+        sys.exit(0)
 
-    if args["wrapper"]:
+    if not (bool(args["command"]) ^ bool(args["compiler_wrapper"])):
+        print(
+            "Error: Please specify either a command to run (using ---) or --compiler-wrapper, but not both."
+        )
+        print()
+        parser.print_help()
+        sys.exit(1)
+
+    if args["compiler_wrapper"]:
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
-            f.write(wrapper(args))
+            f.write(
+                textwrap.dedent(
+                    f"""
+                #! /usr/bin/env python3
+                import sys
+                from cwhy import cwhy
+                cwhy.wrapper({args}, ["{args["compiler_wrapper"]}", *sys.argv[1:]])
+                """
+                ).lstrip()
+            )
         # NamedTemporaryFiles are not executable by default. Set its mode to 755 here with an octal literal.
         os.chmod(f.name, 0o755)
-        print(f.name)        
+        print(f.name)
     else:
-        stdin = sys.stdin.read()
-        if stdin:
-            print(cwhy.evaluate(args, stdin))
+        cwhy.wrapper(args, args["command"])
