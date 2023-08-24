@@ -4,7 +4,7 @@ import textwrap
 import os
 import subprocess
 import collections
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import openai
 import tiktoken
@@ -431,11 +431,27 @@ def wrapper(args, command: List[str]):
     print(process.stdout)
 
     status = process.returncode
-    if status != 0:
-        if "CWHY_DISABLE" not in os.environ:
-            print("==================================================")
-            print("CWhy")
-            print("==================================================")
+    if status != 0 and "CWHY_DISABLE" not in os.environ:
+        print("==================================================")
+        print("CWhy")
+        print("==================================================")
+        if not args["interactive"]:
             print(evaluate(args, process.stdout))
-            print("==================================================")
+        else:
+            if args["subcommand"] != "diff":
+                print("Interactive mode is only supported for the diff subcommand.")
+                sys.exit(1)
+
+            diff = evaluate_diff(args, process.stdout)
+            original_file_contents = {}
+            try:
+                print(diff)
+                sys.exit(0)
+            except KeyboardInterrupt:
+                print("Restoring files to their original state...")
+                for filename, contents in original_file_contents.items():
+                    with open(filename, "w") as f:
+                        f.write(contents)
+                raise KeyboardInterrupt
+        print("==================================================")
     sys.exit(status)

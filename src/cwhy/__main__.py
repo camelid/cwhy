@@ -50,7 +50,6 @@ def main():
         default=1920,
         help="maximum number of code locations tokens to send in the prompt (default: 1920)",
     )
-
     parser.add_argument(
         "--show-prompt",
         action="store_true",
@@ -62,6 +61,11 @@ def main():
         type=str,
         default=None,
         help="enable compiler wrapper mode, providing the path to the compiler to wrap",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="enables interactive mode (currently only supported for the diff command)",
     )
 
     parser.add_argument(
